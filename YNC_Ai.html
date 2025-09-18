@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>چت‌بات YNC_Ai</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+        // برای جلوگیری از چشمک زدن صفحه، تم را قبل از بارگذاری کامل اعمال می‌کنیم
+        function applyInitialTheme() {
+            const savedTheme = localStorage.getItem(`theme_YNC_Ai_${localStorage.getItem('currentUser_YNC_Ai')}`) || localStorage.getItem('theme_YNC_Ai_guest') || 'system';
+            if (savedTheme === 'dark' || (savedTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+        applyInitialTheme();
+    </script>
+    <style>
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        .dark ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        .hidden { display: none; }
+        
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message-bubble { animation: fadeInUp 0.4s ease-out; }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .code-block {
+            background-color: #020617; /* slate-950 */
+            border-radius: 8px;
+            padding: 16px;
+            font-family: monospace;
+            direction: ltr;
+            text-align: left;
+            position: relative;
+        }
+        .code-block pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 14px;
+        }
+        .code-block .copy-code-btn {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background-color: #334155;
+            color: #cbd5e1;
+            border: none;
+            border-radius: 6px;
+            padding: 4px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .code-block:hover .copy-code-btn {
+            opacity: 1;
+        }
+        
+        /* استایل سوییچ تم */
+        .switch { position: relative; display: inline-block; width: 60px; height: 34px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #4f46e5; }
+        input:focus + .slider { box-shadow: 0 0 1px #4f46e5; }
+        input:checked + .slider:before { transform: translateX(26px); }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-slate-900 flex flex-col items-center justify-center h-screen p-4 transition-colors duration-300">
+
+    <!-- کانتینر احراز هویت -->
+    <div id="auth-container" class="w-full max-w-md hidden">
+        <div class="bg-white dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl shadow-2xl p-8">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-gradient-to-br from-sky-400 to-indigo-500 rounded-full flex items-center justify-center font-bold text-2xl text-white mx-auto mb-4">
+                    Ai
+                </div>
+                <h1 id="auth-title" class="text-2xl font-bold text-gray-800 dark:text-slate-100">ورود به YNC_Ai</h1>
+                <p id="auth-subtitle" class="text-gray-500 dark:text-slate-400 mt-2">برای ادامه وارد حساب خود شوید.</p>
+            </div>
+
+            <div id="login-view">
+                <div class="space-y-4">
+                    <div>
+                        <label for="login-email" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">ایمیل</label>
+                        <input type="email" id="login-email" class="w-full bg-gray-200 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg p-3 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="example@email.com">
+                    </div>
+                    <div>
+                        <label for="login-password" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">رمز عبور</label>
+                        <input type="password" id="login-password" class="w-full bg-gray-200 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg p-3 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="••••••••">
+                    </div>
+                    <button id="loginButton" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-300">ورود</button>
+                    <p id="login-error" class="text-red-500 dark:text-red-400 text-sm text-center mt-2 hidden">لطفا ایمیل و رمز عبور را وارد کنید.</p>
+                    <p class="text-center text-sm text-gray-600 dark:text-slate-400">حساب کاربری ندارید؟ <a href="#" id="show-signup" class="font-medium text-indigo-600 dark:text-indigo-400 hover:underline">ثبت‌نام کنید</a></p>
+                </div>
+            </div>
+
+            <div id="signup-view" class="hidden">
+                <div class="space-y-4">
+                    <div>
+                        <label for="signup-email" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">ایمیل</label>
+                        <input type="email" id="signup-email" class="w-full bg-gray-200 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg p-3 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="example@email.com">
+                    </div>
+                    <div>
+                        <label for="signup-password" class="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">رمز عبور</label>
+                        <input type="password" id="signup-password" class="w-full bg-gray-200 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg p-3 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="••••••••">
+                    </div>
+                    <button id="signupButton" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-300">ایجاد حساب</button>
+                    <p id="signup-error" class="text-red-500 dark:text-red-400 text-sm text-center mt-2 hidden">لطفا تمام فیلدها را پر کنید.</p>
+                    <p class="text-center text-sm text-gray-600 dark:text-slate-400">حساب کاربری دارید؟ <a href="#" id="show-login" class="font-medium text-indigo-600 dark:text-indigo-400 hover:underline">وارد شوید</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- مودال چالش ریاضی -->
+    <div id="math-challenge-modal-overlay" class="modal-overlay hidden">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 w-full max-w-sm mx-4 text-center">
+            <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-4">برای تایید هویت، به سوال زیر پاسخ دهید:</h2>
+            <p id="math-problem" class="text-2xl font-mono text-amber-500 dark:text-amber-400 mb-4"></p>
+            <input type="number" id="math-answer" class="w-full text-center bg-gray-200 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded-lg p-3 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="پاسخ">
+            <button id="verifyMathButton" class="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-300">تایید</button>
+            <p id="math-error" class="text-red-500 dark:text-red-400 text-sm text-center mt-2 hidden">پاسخ نادرست است.</p>
+        </div>
+    </div>
+    
+    <!-- مودال تنظیمات -->
+    <div id="settings-modal-overlay" class="modal-overlay hidden">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-gray-800 dark:text-slate-100">تنظیمات</h2>
+                <button id="closeSettingsModalButton" class="text-gray-500 dark:text-slate-400 hover:text-gray-800 dark:hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-gray-700 dark:text-slate-300">حالت تاریک</span>
+                <label class="switch">
+                    <input type="checkbox" id="themeToggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="chat-container" class="bg-white dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-2xl h-full flex flex-col hidden">
+        <div class="bg-gray-50 dark:bg-slate-700/50 p-4 rounded-t-2xl border-b border-gray-200 dark:border-slate-700 flex items-center justify-between gap-4">
+             <div class="flex items-center gap-4">
+                <div class="relative">
+                    <div class="w-12 h-12 bg-gradient-to-br from-sky-400 to-indigo-500 rounded-full flex items-center justify-center font-bold text-lg text-white">Ai</div>
+                    <span class="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-green-400 ring-2 ring-white dark:ring-slate-800"></span>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-gray-800 dark:text-slate-100">YNC_Ai</h1>
+                </div>
+             </div>
+            <div class="flex items-center gap-1">
+                <div title="چت‌ها توسط ربات ناظر بررسی می‌شوند" class="text-gray-400 dark:text-slate-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                </div>
+                 <button id="settingsButton" class="text-gray-500 dark:text-slate-400 hover:text-gray-800 dark:hover:text-white p-2 rounded-lg transition-colors" title="تنظیمات">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                </button>
+                 <button id="clearChatButton" class="text-gray-500 dark:text-slate-400 hover:text-gray-800 dark:hover:text-white p-2 rounded-lg transition-colors" title="پاک کردن گفتگو">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                </button>
+                <button id="logoutButton" class="text-gray-500 dark:text-slate-400 hover:text-gray-800 dark:hover:text-white p-2 rounded-lg transition-colors" title="خروج از حساب">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                </button>
+            </div>
+        </div>
+
+        <div id="chatbox" class="flex-1 p-6 overflow-y-auto space-y-6"></div>
+
+        <div class="p-4 bg-white dark:bg-slate-800/60 rounded-b-2xl border-t border-gray-200 dark:border-slate-700">
+            <div class="flex items-center bg-gray-100 dark:bg-slate-900 rounded-xl p-2">
+                <input type="text" id="userInput" class="flex-1 bg-transparent text-gray-800 dark:text-slate-200 placeholder-gray-500 dark:placeholder-slate-500 focus:outline-none px-4" placeholder="پیام خود را اینجا بنویسید...">
+                <button id="micButton" class="text-gray-500 dark:text-slate-400 hover:text-gray-800 dark:hover:text-white p-3 rounded-lg transition-colors duration-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-mic"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+                </button>
+                <button id="sendButton" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold p-3 rounded-lg transition-colors duration-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-send"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- عناصر UI ---
+        const authContainer = document.getElementById('auth-container');
+        const chatContainer = document.getElementById('chat-container');
+        const loginView = document.getElementById('login-view');
+        const signupView = document.getElementById('signup-view');
+        const loginEmailInput = document.getElementById('login-email');
+        const loginPasswordInput = document.getElementById('login-password');
+        const loginButton = document.getElementById('loginButton');
+        const loginError = document.getElementById('login-error');
+        const signupEmailInput = document.getElementById('signup-email');
+        const signupPasswordInput = document.getElementById('signup-password');
+        const signupButton = document.getElementById('signupButton');
+        const signupError = document.getElementById('signup-error');
+        const showSignupLink = document.getElementById('show-signup');
+        const showLoginLink = document.getElementById('show-login');
+        const logoutButton = document.getElementById('logoutButton');
+        const clearChatButton = document.getElementById('clearChatButton');
+        const chatbox = document.getElementById('chatbox');
+        const userInput = document.getElementById('userInput');
+        const sendButton = document.getElementById('sendButton');
+        const micButton = document.getElementById('micButton');
+        
+        const mathChallengeModal = document.getElementById('math-challenge-modal-overlay');
+        const mathProblem = document.getElementById('math-problem');
+        const mathAnswerInput = document.getElementById('math-answer');
+        const verifyMathButton = document.getElementById('verifyMathButton');
+        const mathError = document.getElementById('math-error');
+        
+        const settingsModal = document.getElementById('settings-modal-overlay');
+        const settingsButton = document.getElementById('settingsButton');
+        const closeSettingsModalButton = document.getElementById('closeSettingsModalButton');
+        const themeToggle = document.getElementById('themeToggle');
+
+        let conversationHistory = [];
+        let isRecording = false;
+        let currentUser = null;
+        let mathChallengeAnswer = 0;
+
+        // --- منطق چالش ریاضی ---
+        function setupMathChallenge() {
+            mathError.classList.add('hidden');
+            mathAnswerInput.value = '';
+            const num1 = Math.floor(Math.random() * 10) + 1;
+            const num2 = Math.floor(Math.random() * 10) + 1;
+            mathChallengeAnswer = num1 * num2;
+            mathProblem.textContent = `${num1} × ${num2} = ?`;
+            mathChallengeModal.classList.remove('hidden');
+        }
+
+        verifyMathButton.addEventListener('click', () => {
+            const userAnswer = parseInt(mathAnswerInput.value, 10);
+            if (userAnswer === mathChallengeAnswer) {
+                mathChallengeModal.classList.add('hidden');
+                login(signupEmailInput.value.trim());
+            } else {
+                mathError.classList.remove('hidden');
+                setupMathChallenge();
+            }
+        });
+
+        // --- منطق احراز هویت (شبیه‌سازی شده) ---
+        function login(email) {
+            currentUser = email;
+            localStorage.setItem('currentUser_YNC_Ai', currentUser);
+            loadChatHistory();
+            loadAndSetTheme();
+            authContainer.classList.add('hidden');
+            chatContainer.classList.remove('hidden');
+            scrollToBottom();
+        }
+        
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('currentUser_YNC_Ai');
+            conversationHistory = [];
+            chatContainer.classList.add('hidden');
+            authContainer.classList.remove('hidden');
+            loginView.classList.remove('hidden');
+            signupView.classList.add('hidden');
+        }
+
+        function saveChatHistory() {
+            if (currentUser) {
+                localStorage.setItem(`chatHistory_YNC_Ai_${currentUser}`, JSON.stringify(conversationHistory));
+            }
+        }
+        
+        function getInitialMessage() {
+            return {
+                role: 'bot',
+                type: 'text',
+                content: 'سلام! من YNC_Ai هستم. یک مدل زبان پیشرفته که برای کمک به شما در انجام وظایف مختلف ساخته شده‌ام. چطور می‌توانم امروز شما را یاری کنم؟',
+                feedback: null
+            };
+        }
+
+        function loadChatHistory() {
+            const savedHistory = localStorage.getItem(`chatHistory_YNC_Ai_${currentUser}`);
+            conversationHistory = savedHistory ? JSON.parse(savedHistory) : [getInitialMessage()];
+            renderChatHistory();
+        }
+
+        function clearChatHistory() {
+            conversationHistory = [getInitialMessage()];
+            saveChatHistory();
+            renderChatHistory();
+        }
+
+        function renderChatHistory() {
+            chatbox.innerHTML = '';
+            conversationHistory.forEach((message, index) => appendMessage(message, index, false));
+            scrollToBottom();
+        }
+
+        // --- منطق تم ---
+        function setTheme(theme) {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+                themeToggle.checked = true;
+            } else {
+                document.documentElement.classList.remove('dark');
+                themeToggle.checked = false;
+            }
+            const key = currentUser ? `theme_YNC_Ai_${currentUser}` : 'theme_YNC_Ai_guest';
+            localStorage.setItem(key, theme);
+        }
+
+        function loadAndSetTheme() {
+            const key = currentUser ? `theme_YNC_Ai_${currentUser}` : 'theme_YNC_Ai_guest';
+            const savedTheme = localStorage.getItem(key);
+            if(savedTheme) {
+                setTheme(savedTheme);
+            } else {
+                // Check system preference
+                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    setTheme('dark');
+                } else {
+                    setTheme('light');
+                }
+            }
+        }
+
+        themeToggle.addEventListener('change', () => {
+            setTheme(themeToggle.checked ? 'dark' : 'light');
+        });
+
+        settingsButton.addEventListener('click', () => {
+            settingsModal.classList.remove('hidden');
+        });
+        closeSettingsModalButton.addEventListener('click', () => {
+            settingsModal.classList.add('hidden');
+        });
+
+
+        function generateGeminiLikeResponse(message, history) {
+            const lowerCaseMessage = message.toLowerCase().replace(/ /g, '');
+             if (lowerCaseMessage.includes('کدجاوااسکریپت') || lowerCaseMessage.includes('javascript')) {
+                return { type: 'code', language: 'javascript' };
+            }
+            if (lowerCaseMessage.includes('کدپایتون') || lowerCaseMessage.includes('python')) {
+                return { type: 'code', language: 'python' };
+            }
+            if (lowerCaseMessage.includes('کد') || lowerCaseMessage.includes('برنامه')) {
+                return { type: 'code', language: 'python' };
+            }
+            if (lowerCaseMessage.includes('سلام')) {
+                return { type: 'text', content: 'درود بر شما! چطور می‌توانم کمک کنم؟' };
+            }
+            if (lowerCaseMessage.includes('خوبی')) {
+                return { type: 'text', content: 'ممنونم، من به عنوان یک مدل هوش مصنوعی همیشه آماده کمک به شما هستم.' };
+            }
+            return { type: 'text', content: 'متوجه سوال شما نشدم. می‌توانید به شکل دیگری بپرسید؟' };
+        }
+
+        function appendMessage(message, index, animate = true) {
+            // ... (Implementation from previous version)
+        }
+
+        function sendMessage() {
+            // ... (Implementation from previous version)
+        }
+
+        function scrollToBottom() { chatbox.scrollTop = chatbox.scrollHeight; }
+        
+        function simulateModeration(text) {
+            const flaggedWords = ['کلمه_نامناسب', 'توهین']; 
+            let isFlagged = false;
+            flaggedWords.forEach(word => {
+                if (text.toLowerCase().includes(word)) { isFlagged = true; }
+            });
+            return isFlagged;
+        }
+
+        // --- Event Listeners ---
+        showSignupLink.addEventListener('click', (e) => { e.preventDefault(); loginView.classList.add('hidden'); signupView.classList.remove('hidden'); });
+        showLoginLink.addEventListener('click', (e) => { e.preventDefault(); signupView.classList.add('hidden'); loginView.classList.remove('hidden'); });
+        loginButton.addEventListener('click', () => { if (loginEmailInput.value.trim() === '' || loginPasswordInput.value.trim() === '') { loginError.classList.remove('hidden'); } else { loginError.classList.add('hidden'); login(loginEmailInput.value.trim()); } });
+        signupButton.addEventListener('click', () => { if (signupEmailInput.value.trim() === '' || signupPasswordInput.value.trim() === '') { signupError.classList.remove('hidden'); } else { signupError.classList.add('hidden'); setupMathChallenge(); } });
+        logoutButton.addEventListener('click', logout);
+        clearChatButton.addEventListener('click', clearChatHistory);
+        sendButton.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+         window.onload = () => { const loggedInUser = localStorage.getItem('currentUser_YNC_Ai'); if (loggedInUser) { login(loggedInUser); } else { authContainer.classList.remove('hidden'); chatContainer.classList.add('hidden'); loadAndSetTheme(); } };
+         chatbox.addEventListener('click', (e) => { const copyButton = e.target.closest('.copy-code-btn'); if (copyButton) { const codeBlock = copyButton.closest('.code-block'); const codeToCopy = codeBlock.querySelector('code').textContent; navigator.clipboard.writeText(codeToCopy).then(() => { const copyIcon = copyButton.querySelector('.copy-icon'); const checkIcon = copyButton.querySelector('.check-icon'); copyIcon.classList.add('hidden'); checkIcon.classList.remove('hidden'); setTimeout(() => { copyIcon.classList.remove('hidden'); checkIcon.classList.add('hidden'); }, 2000); }); } });
+        
+        // --- Full Function Implementations for brevity ---
+        appendMessage = function(message, index, animate = true) { const wrapper = document.createElement('div'); wrapper.dataset.messageId = index; if (animate) { wrapper.classList.add('message-bubble'); } if (message.role === 'user') { wrapper.innerHTML = `<div class="flex items-end gap-3 justify-end"><div class="bg-indigo-500 p-4 rounded-2xl rounded-br-none max-w-md"><p class="text-white">${message.content}</p></div><div class="w-10 h-10 bg-gray-300 dark:bg-slate-600 rounded-full flex items-center justify-center shrink-0"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-600 dark:text-slate-300"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div></div>`; } else { let contentHTML = ''; const descText = message.content; if (message.type === 'code') { const highlightedCode = highlightSyntax(message.code, message.language); contentHTML = `<p class="text-gray-700 dark:text-slate-200 mb-3">${descText}</p><div class="code-block"><pre><code class="language-${message.language}">${highlightedCode}</code></pre><button class="copy-code-btn" title="کپی کردن کد"><svg class="copy-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><svg class="check-icon hidden" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></button></div>`; } else { contentHTML = `<p class="text-gray-700 dark:text-slate-200 message-text">${descText}</p>`; } wrapper.innerHTML = `<div class="flex items-start gap-3"><div class="w-10 h-10 bg-gradient-to-br from-sky-400 to-indigo-500 rounded-full flex items-center justify-center shrink-0 font-bold text-base text-white">Ai</div><div class="bg-gray-100 dark:bg-slate-700 p-4 rounded-2xl rounded-tl-none max-w-md group relative">${contentHTML}</div></div>`; } chatbox.appendChild(wrapper); };
+        sendMessage = function() { const messageText = userInput.value.trim(); if (messageText === '') return; const userMessage = { role: 'user', content: messageText, flaggedByModerator: simulateModeration(messageText) }; console.log("پیام کاربر بررسی شد:", userMessage); conversationHistory.push(userMessage); appendMessage(userMessage, conversationHistory.length - 1); saveChatHistory(); userInput.value = ''; scrollToBottom(); const typingIndicator = document.createElement('div'); typingIndicator.id = 'typing-indicator'; typingIndicator.classList.add('message-bubble'); typingIndicator.innerHTML = `<div class="flex items-start gap-3"><div class="w-10 h-10 bg-gradient-to-br from-sky-400 to-indigo-500 rounded-full flex items-center justify-center shrink-0 font-bold text-base text-white">Ai</div><div class="bg-gray-100 dark:bg-slate-700 p-4 rounded-2xl rounded-tl-none"><div class="flex items-center gap-2"><span class="w-2 h-2 bg-gray-400 dark:bg-slate-400 rounded-full animate-pulse"></span><span class="w-2 h-2 bg-gray-400 dark:bg-slate-400 rounded-full animate-pulse" style="animation-delay: 0.15s;"></span><span class="w-2 h-2 bg-gray-400 dark:bg-slate-400 rounded-full animate-pulse" style="animation-delay: 0.3s;"></span></div></div></div>`; chatbox.appendChild(typingIndicator); scrollToBottom(); setTimeout(() => { document.getElementById('typing-indicator')?.remove(); let botMessage; const response = generateGeminiLikeResponse(messageText, conversationHistory); if (response.type === 'code') { let codeSnippet = ''; if(response.language === 'python') { codeSnippet = `def greet(name):\n  print(f"Hello, {name}!")\n\ngreet("YNC_Ai")`; } else if (response.language === 'javascript') { codeSnippet = `function greet(name) {\n  console.log(\`Hello, \${name}!\`);\n}\n\ngreet("YNC_Ai");`; } botMessage = { role: 'bot', type: 'code', content: `حتما! این یک قطعه کد ${response.language} به عنوان مثال است:`, code: codeSnippet, language: response.language }; } else { botMessage = { role: 'bot', type: 'text', content: response.content }; } conversationHistory.push(botMessage); appendMessage(botMessage, conversationHistory.length - 1); saveChatHistory(); scrollToBottom(); }, 1000 + Math.random() * 500); };
+    </script>
+</body>
+</html>
+
